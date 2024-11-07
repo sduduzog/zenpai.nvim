@@ -1,19 +1,13 @@
 local M = {}
 
-local window = require "zenpai.window"
+local Menu = require "nui.menu"
 local git_cmd = require "zenpai.git_cmd"
 
-local function on_prompt_input(input)
-  local response = ""
-
-  if input ~= "gen" then
-    return
-  end
-
+local function generate_commit()
   if not git_cmd.is_git_repo() then
-    response = "not a git repository."
+    vim.notify("not a git repository.", vim.log.levels.INFO)
   elseif not git_cmd.has_changes() then
-    response = "no changes to commit."
+    vim.notify("no changes to commit.", vim.log.levels.INFO)
   else
     local files_to_stage = git_cmd.files_to_be_staged()
     if not files_to_stage then
@@ -34,25 +28,49 @@ local function on_prompt_input(input)
     local diff = git_cmd.get_diff()
     vim.notify(diff, vim.log.levels.INFO)
   end
+end
 
-  local buf = window.get_state().buf
-  if buf and vim.api.nvim_buf_is_valid(buf) then
-    vim.api.nvim_buf_set_lines(buf, -1, -1, false, { response })
+local function menu_option_selected(item)
+  if item.id == 1 then
+    generate_commit()
   end
 end
 
-local function toggle_window()
-  local win = window.get_state().win
-  if win and vim.api.nvim_win_is_valid(win) then
-    window.close_window()
-  else
-    window.open_window(on_prompt_input)
-  end
-end
+local menu = Menu({
+  position = "50%",
+  size = {
+    width = 25,
+    height = 5,
+  },
+  border = {
+    style = "single",
+    text = {
+      top = "[Choose Action]",
+      top_align = "center",
+    },
+  },
+  win_options = {
+    winhighlight = "Normal:Normal,FloatBorder:Normal",
+  },
+}, {
+  lines = {
+    Menu.item("Commit Changes", { id = 1 }),
+  },
+  max_width = 20,
+  keymap = {
+    focus_next = { "j", "<Down>", "<Tab>" },
+    focus_prev = { "k", "<Up>", "<S-Tab>" },
+    close = { "<Esc>", "<C-c>" },
+    submit = { "<CR>", "<Space>" },
+  },
+  on_submit = menu_option_selected,
+})
 
 function M.setup(opts)
   opts = opts or {}
-  vim.keymap.set("n", "<Leader>i", toggle_window)
+  vim.keymap.set("n", "<Leader>i", function()
+    menu:mount()
+  end)
 end
 
 return M
