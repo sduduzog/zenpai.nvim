@@ -25,6 +25,11 @@ function M.stage_files()
   run_command "git add ."
 end
 
+function M.commit(commit_msg)
+  run_command('git commit -m "' .. commit_msg .. '"')
+  return vim.v.shell_error == 0
+end
+
 function M.get_diff()
   local staged_diff = run_command "git diff --staged"
   local unstaged_diff = run_command "git diff"

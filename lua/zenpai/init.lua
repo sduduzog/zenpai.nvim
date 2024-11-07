@@ -2,6 +2,8 @@ local M = {}
 
 local Menu = require "nui.menu"
 local git_cmd = require "zenpai.git_cmd"
+local openai = require "zenpai.openai"
+local prompts = require "zenpai.prompts"
 
 local function generate_commit()
   if not git_cmd.is_git_repo() then
@@ -18,15 +20,35 @@ local function generate_commit()
     local confirm = vim.fn.input(prompt_msg):lower()
 
     if confirm ~= "y" and confirm ~= "yes" then
-      vim.notify("staging aborted.", vim.log.levels.INFO)
+      vim.notify "staging aborted."
       return
     end
 
     git_cmd.stage_files()
-    vim.notify("files staged successfully.", vim.log.levels.INFO)
+    vim.notify "files staged successfully."
 
     local diff = git_cmd.get_diff()
-    vim.notify(diff, vim.log.levels.INFO)
+    local commit_msg_prompt = prompts.commit_msg_prompt(diff)
+
+    openai.completions({
+      messages = {
+        { role = "system", content = "You are to act as an author of a commit message in git." },
+        { role = "user", content = commit_msg_prompt },
+      },
+    }, function(data)
+      vim.schedule(function()
+        local commit_msg = data.choices[1].message.content
+        if git_cmd.commit(commit_msg) then
+          vim.notify "changes committed successfully."
+        else
+          vim.notify("commit failed. please check the error.", vim.log.levels.ERROR)
+        end
+      end)
+    end, function(err)
+      vim.schedule(function()
+        vim.notify(err)
+      end)
+    end)
   end
 end
 
