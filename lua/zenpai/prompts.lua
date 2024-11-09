@@ -2,14 +2,24 @@ local M = {}
 
 function M.commit_msg_prompt(diff)
   local prompt = [[
-    Generate a git commit message based on the output of a diff command.
-    Summarize the change in less than 50 characters
+    Generate a git commit message for the following diff output. Follow these rules:
 
-    Because:
-    - Explain the reasons you made this change
-    - Make a new bullet for each reason
-    - Each line should be under 72 characters
-    - Don't include the "Because:" in the commit.
+    1. First line must:
+      - Start with a type (feat/fix/refactor/style/test/docs/chore)
+      - Use the format: type: description
+      - Be less than 50 characters 
+      - Use imperative mood ("add" not "added")
+
+
+    3. The body must:
+      - Leave one blank line after the title
+      - Limit to key points; avoid unnecessary detail
+      - Wrap lines at 72 characters
+      - Use bullet points ("-") in imperative mood
+      - Mention specific functions, variables, or components changed
+      - Describe *what* was changed and *why* it matters, in brief
+
+    Return only the commit message text.
 
     Here is the diff output:
     ]]
