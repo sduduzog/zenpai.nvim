@@ -12,6 +12,10 @@ function M.has_changes()
   return run_command "git status --porcelain" ~= ""
 end
 
+function M.current_branch()
+  return run_command "git rev-parse --abbrev-ref HEAD"
+end
+
 function M.files_to_be_staged()
   local status = run_command "git status --porcelain"
   if status ~= "" then
@@ -26,7 +30,13 @@ function M.stage_files()
 end
 
 function M.commit(commit_msg)
+  vim.notify(commit_msg)
   run_command('git commit -m "' .. commit_msg .. '"')
+  return vim.v.shell_error == 0
+end
+
+function M.create_branch(branch_name)
+  run_command('git checkout -b "' .. branch_name .. '"')
   return vim.v.shell_error == 0
 end
 

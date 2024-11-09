@@ -7,49 +7,60 @@ local prompts = require "zenpai.prompts"
 
 local function generate_commit()
   if not git_cmd.is_git_repo() then
-    vim.notify("not a git repository.", vim.log.levels.INFO)
-  elseif not git_cmd.has_changes() then
-    vim.notify("no changes to commit.", vim.log.levels.INFO)
-  else
-    local files_to_stage = git_cmd.files_to_be_staged()
-    if not files_to_stage then
-      return
-    end
-
-    local prompt_msg = string.format("%s\nstage these files? (y/n): ", files_to_stage)
-    local confirm = vim.fn.input(prompt_msg):lower()
-
-    if confirm ~= "y" and confirm ~= "yes" then
-      vim.notify "staging aborted."
-      return
-    end
-
-    git_cmd.stage_files()
-    vim.notify "files staged successfully."
-
-    local diff = git_cmd.get_diff()
-    local commit_msg_prompt = prompts.commit_msg_prompt(diff)
-
-    openai.completions({
-      messages = {
-        { role = "system", content = "You are to act as an author of a commit message in git." },
-        { role = "user", content = commit_msg_prompt },
-      },
-    }, function(data)
-      vim.schedule(function()
-        local commit_msg = data.choices[1].message.content
-        if git_cmd.commit(commit_msg) then
-          vim.notify "changes committed successfully."
-        else
-          vim.notify("commit failed. please check the error.", vim.log.levels.ERROR)
-        end
-      end)
-    end, function(err)
-      vim.schedule(function()
-        vim.notify(err)
-      end)
-    end)
+    vim.notify "not a git repository."
+    return
   end
+
+  if not git_cmd.has_changes() then
+    vim.notify "no changes to commit."
+    return
+  end
+
+  local files_to_stage = git_cmd.files_to_be_staged()
+  if not files_to_stage then
+    return
+  end
+
+  local curr_branch = git_cmd.current_branch()
+  if curr_branch == "main" or curr_branch == "master" then
+    if not git_cmd.create_branch "wip" then
+      vim.notify("error checking out new branch.", vim.log.levels.ERROR)
+      return
+    end
+  end
+
+  local prompt_msg = string.format("%s\nstage these files? (y/n): ", files_to_stage)
+  local confirm = vim.fn.input(prompt_msg):lower()
+  if confirm ~= "y" and confirm ~= "yes" then
+    vim.notify "staging aborted."
+    return
+  end
+
+  git_cmd.stage_files()
+  vim.notify "files staged successfully."
+
+  local diff = git_cmd.get_diff()
+  local commit_msg_prompt = prompts.commit_msg_prompt(diff)
+
+  openai.completions({
+    messages = {
+      { role = "system", content = "You are to act as an author of a commit message in git." },
+      { role = "user", content = commit_msg_prompt },
+    },
+  }, function(data)
+    vim.schedule(function()
+      local commit_msg = data.choices[1].message.content:lower()
+      if git_cmd.commit(commit_msg) then
+        vim.notify "changes committed successfully."
+      else
+        vim.notify("error committing changes.", vim.log.levels.ERROR)
+      end
+    end)
+  end, function(err)
+    vim.schedule(function()
+      vim.notify(err.error.message)
+    end)
+  end)
 end
 
 local function menu_option_selected(item)
