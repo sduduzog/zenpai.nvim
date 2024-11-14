@@ -2,24 +2,25 @@ local M = {}
 
 function M.commit_msg_prompt(diff)
   local prompt = [[
-    Generate a git commit message for the following diff output. Follow these rules:
+    Generate a concise git commit message for this diff. Rules:
 
-    1. First line must:
-      - Start with a type (feat/fix/refactor/style/test/docs/chore)
-      - Use the format: type: description
-      - Be less than 50 characters 
-      - Use imperative mood ("add" not "added")
+    Title line (50 chars max):
+      - Format: type: description
+      - Type must be: feat/fix/refactor/style/test/docs/chore
+      - Use imperative ("add" not "added" )
 
+    Body:
+      - Leave one blank line after title
+      - Use bullet points (-)
+      - Number of bullets should match scope of changeset
+      - Mark function names, variables and components with backticks 
+      - Focus on WHAT changed and WHY it matters
+      - Keep it short but meaningful
+      - Wrap at 72 chars
 
-    3. The body must:
-      - Leave one blank line after the title
-      - Limit to key points; avoid unnecessary detail
-      - Wrap lines at 72 characters
-      - Use bullet points ("-") in imperative mood
-      - Mention specific functions, variables, or components changed
-      - Describe *what* was changed and *why* it matters, in brief
-
-    Return only the commit message text.
+    <Important>
+    Output raw text only, no markup or backticks around the commit message.
+    </Important>
 
     Here is the diff output:
     ]]
